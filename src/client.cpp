@@ -13,8 +13,9 @@ int main() {
 
     std::cout << "START " << udp::StartSocket(client) << std::endl;
 
-    std::string sSend = "Hello server!";
-    std::cout << "SENT " << udp::Send(client, sSend) << std::endl;;
+    std::string sMessage = "Hello server!";
+    std::vector<unsigned char> sSend(sMessage.begin(), sMessage.end());
+    std::cout << "SENT " << udp::Send(client, sSend) << std::endl;
 
     udp::CloseSocket(client);
 }

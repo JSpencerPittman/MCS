@@ -13,8 +13,9 @@ int main() {
 
      std::cout << "START " << udp::StartSocket(sock) << std::endl;
 
-    std::string sMessage;
-    udp::Receive(sock, sMessage, 1024);
+    std::vector<unsigned char> sRecv;
+    udp::Receive(sock, sRecv, 1024);
+    std::string sMessage(sRecv.begin(), sRecv.end());
 
     std::cout << "RECIEVED: " << sMessage << std::endl;
 

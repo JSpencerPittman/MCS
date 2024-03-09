@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 #include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -27,8 +28,8 @@ namespace udp {
     bool StartSocket(Socket& stSocket);
     void CloseSocket(Socket& stSocket);
 
-    bool Send(Socket& stSocket, std::string& sMessage);
-    void Receive(Socket& stSocket, std::string& sMessage, uint64_t unBufferSize);
+    bool Send(Socket& stSocket, std::vector<unsigned char>& sMessage);
+    void Receive(Socket& stSocket, std::vector<unsigned char>& sMessage, uint64_t unBufferSize);
 };
 
 #endif

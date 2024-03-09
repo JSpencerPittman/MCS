@@ -32,9 +32,9 @@ namespace udp {
         close(stSocket.nFileDescriptor);
     }
 
-    bool Send(Socket& stSocket, std::string& sMessage) {
+    bool Send(Socket& stSocket, std::vector<unsigned char>& sMessage) {
         int nResult = sendto(stSocket.nFileDescriptor,
-               sMessage.c_str(),
+               sMessage.data(),
                sMessage.size(),
                MSG_CONFIRM,
                (const sockaddr *) &stSocket.stRecieverAddress,
@@ -42,17 +42,20 @@ namespace udp {
         return nResult >= 0 ? true : false;
     }
 
-    void Receive(Socket& stSocket, std::string& sMessage, uint64_t unBufferSize) {
-        char aBuffer[unBufferSize];
+    void Receive(Socket& stSocket, std::vector<unsigned char>& sMessage, uint64_t unBufferSize) {
+        // char aBuffer[unBufferSize];
+        unsigned char* pBuffer = new unsigned char[unBufferSize];
         socklen_t siAddrLen = sizeof(stSocket.stSenderAddress);
         int nMessageLength = recvfrom(stSocket.nFileDescriptor, 
-                (char *) aBuffer, 
+                // (char *) aBuffer,
+                pBuffer, 
                 unBufferSize, 
                 MSG_WAITALL, 
                 (sockaddr *) &stSocket.stSenderAddress, 
                 &siAddrLen);
-        aBuffer[nMessageLength] = '\0';
-        sMessage = std::string(aBuffer);
+        // aBuffer[nMessageLength] = '\0';
+        // sMessage = std::string(aBuffer);
+        sMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
     }
 
 };

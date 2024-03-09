@@ -7,16 +7,15 @@
 using namespace std;
 
 int main() {
-    cout << "Starting Client" << endl;
+    cout << "Starting Client..." << endl;
 
-    udp::Socket socket;
-    socket.sIPAddr = IP_ADDR;
-    socket.unPort = PORT;
+    udp::Socket servSock(IP_ADDR, PORT);
+    udp::Socket cliSock;
 
-     std::cout << "START " << udp::StartSocket(socket) << std::endl;
+    std::cout << "START " << udp::StartSocket(cliSock) << std::endl;
 
     std::string sSend = "Hello server!";
-    udp::Send(socket, sSend);
+    std::cout << "SENT " << udp::Send(cliSock, servSock, sSend) << std::endl;;
 
-    udp::CloseSocket(socket);
+    udp::CloseSocket(cliSock);
 }

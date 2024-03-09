@@ -12,6 +12,9 @@
 namespace udp {
 
     struct Socket {
+        Socket();
+        Socket(const std::string& ipAddr, uint16_t port);
+
         uint16_t unPort;
         std::string sIPAddr;
         int nFileDescriptor;
@@ -23,7 +26,7 @@ namespace udp {
     bool BindSocket(Socket& stSocket);
     void CloseSocket(Socket& stSocket);
 
-    void Send(Socket& stReceiver, std::string& sMessage);
+    bool Send(Socket& stSender, Socket& stReceiver, std::string& sMessage);
     void Receive(Socket& stSender, Socket& stReceiver, std::string& sMessage, uint64_t unBufferSize);
 
 };

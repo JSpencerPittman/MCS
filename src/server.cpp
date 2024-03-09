@@ -7,22 +7,18 @@
 using namespace std;
 
 int main() {
-    cout << "Starting Client" << endl;
+    cout << "Starting Client..." << endl;
 
-    udp::Socket socket;
-    socket.sIPAddr = IP_ADDR;
-    socket.unPort = PORT;
+    udp::Socket servSock(IP_ADDR, PORT);
+    udp::Socket cliSock;
 
-    udp::Socket cli;
-    memset(&cli.stSocketAddress, 0, sizeof(cli.stSocketAddress));
+     std::cout << "START " << udp::StartSocket(servSock) << std::endl;
+     std::cout << "BIND " << udp::BindSocket(servSock) << std::endl;
 
-    std::cout << "START " << udp::StartSocket(socket) << std::endl;
-    std::cout << "BIND " << udp::BindSocket(socket) << std::endl;
+    std::string sMessage;
+    udp::Receive(cliSock, servSock, sMessage, 1024);
 
-    std::string sReceived;
-    udp::Receive(cli, socket, sReceived, 1024);
+    std::cout << "RECIEVED: " << sMessage << std::endl;
 
-    std::cout << sReceived << std::endl;
-
-    udp::CloseSocket(socket);
+    udp::CloseSocket(servSock);
 }

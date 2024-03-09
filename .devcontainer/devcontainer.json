@@ -1,0 +1,13 @@
+{
+    "image": "mcs",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cpptools",
+                "twxs.cmake",
+                "ms-vscode.cmake-tools"
+            ]
+        }
+    }
+}

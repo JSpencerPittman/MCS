@@ -9,13 +9,12 @@ using namespace std;
 int main() {
     cout << "Starting Client..." << endl;
 
-    udp::Socket servSock(IP_ADDR, PORT);
-    udp::Socket cliSock;
+    udp::Socket client(IP_ADDR, PORT, false);
 
-    std::cout << "START " << udp::StartSocket(cliSock) << std::endl;
+    std::cout << "START " << udp::StartSocket(client) << std::endl;
 
     std::string sSend = "Hello server!";
-    std::cout << "SENT " << udp::Send(cliSock, servSock, sSend) << std::endl;;
+    std::cout << "SENT " << udp::Send(client, sSend) << std::endl;;
 
-    udp::CloseSocket(cliSock);
+    udp::CloseSocket(client);
 }

@@ -9,16 +9,15 @@ using namespace std;
 int main() {
     cout << "Starting Client..." << endl;
 
-    udp::Socket servSock(IP_ADDR, PORT);
-    udp::Socket cliSock;
+    udp::Socket sock(IP_ADDR, PORT, true);
 
-     std::cout << "START " << udp::StartSocket(servSock) << std::endl;
-     std::cout << "BIND " << udp::BindSocket(servSock) << std::endl;
+     std::cout << "START " << udp::StartSocket(sock) << std::endl;
+     std::cout << "BIND " << udp::BindSocket(sock) << std::endl;
 
     std::string sMessage;
-    udp::Receive(cliSock, servSock, sMessage, 1024);
+    udp::Receive(sock, sMessage, 1024);
 
     std::cout << "RECIEVED: " << sMessage << std::endl;
 
-    udp::CloseSocket(servSock);
+    udp::CloseSocket(sock);
 }

@@ -6,9 +6,6 @@ namespace udp {
         sIPAddr = ipAddr;
         unPort = port;
         bReceiver = reciever;
-        
-        // sockaddr_in stSockAddrIP4;
-        // memset(&stSockAddrIP4, 0, sizeof(sockaddr_in));
 
         memset(&stSenderAddress, 0, sizeof(sockaddr_in));
         memset(&stRecieverAddress, 0, sizeof(sockaddr_in));
@@ -22,12 +19,11 @@ namespace udp {
         int nFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
         if(nFileDescriptor < 0) return false;
         else stSocket.nFileDescriptor = nFileDescriptor;
-        return true;
-    }
 
-    bool BindSocket(Socket& stSocket) {
-        int nResult = bind(stSocket.nFileDescriptor, (const sockaddr*) &stSocket.stRecieverAddress, sizeof(sockaddr));
-        if(nResult < 0) return false;
+        if(stSocket.bReceiver) {
+            int nResult = bind(stSocket.nFileDescriptor, (const sockaddr*) &stSocket.stRecieverAddress, sizeof(sockaddr));
+            if(nResult < 0) return false;
+        }
 
         return true;
     }

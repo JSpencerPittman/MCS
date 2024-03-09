@@ -20,14 +20,11 @@ namespace udp {
         bool bReceiver;
         int nFileDescriptor;
 
-        // sockaddr_in stSocketAddress;
-
         sockaddr_in stSenderAddress;
         sockaddr_in stRecieverAddress;
     }; 
 
     bool StartSocket(Socket& stSocket);
-    bool BindSocket(Socket& stSocket);
     void CloseSocket(Socket& stSocket);
 
     bool Send(Socket& stSocket, std::string& sMessage);

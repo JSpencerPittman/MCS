@@ -12,7 +12,6 @@ int main() {
     udp::Socket sock(IP_ADDR, PORT, true);
 
      std::cout << "START " << udp::StartSocket(sock) << std::endl;
-     std::cout << "BIND " << udp::BindSocket(sock) << std::endl;
 
     std::string sMessage;
     udp::Receive(sock, sMessage, 1024);

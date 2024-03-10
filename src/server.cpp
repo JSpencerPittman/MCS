@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stream_protocol.h>
 #include "udp.h"
 
 #define IP_ADDR "127.0.0.1"
@@ -11,13 +12,25 @@ int main() {
 
     udp::Socket sock(IP_ADDR, PORT, true);
 
-     std::cout << "START " << udp::StartSocket(sock) << std::endl;
+    std::cout << "START " << udp::StartSocket(sock) << std::endl;
 
-    std::vector<unsigned char> sRecv;
-    udp::Receive(sock, sRecv, 1024);
-    std::string sMessage(sRecv.begin(), sRecv.end());
+    std::vector<unsigned char> buffer;
+    streamprotocol::ImageReconstructor reconstruct;
+    streamprotocol::ImagePacket packet;
+    while (true) {
+        udp::Receive(sock, buffer, 65000);
+        streamprotocol::DecodeImagePacket(buffer, packet);
+        reconstruct.Submit(packet);
+        std::cout << "RECEIVED: " << buffer.size() << std::endl;
+        std::cout << "READY: " << reconstruct.Ready() << std::endl;
+        if(reconstruct.Ready()) break;
+    }
 
-    std::cout << "RECIEVED: " << sMessage << std::endl;
+    cv::Mat frame;
+    bool result = reconstruct.Reconstruct(frame);
+    std::cout << "RESULT: " << result << std::endl;
+
+    cv::imwrite("output.jpg", frame);
 
     udp::CloseSocket(sock);
 }

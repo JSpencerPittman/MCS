@@ -17,7 +17,7 @@ namespace streamprotocol {
 
         uint16_t unPacketNum = pPacket.unPacketNum;
         if(m_pReceived[unPacketNum]) {
-            std::copy(m_lPayloads[unPacketNum].begin(), m_lPayloads[unPacketNum].end(), pPacket.vPayload.begin());
+            std::copy(pPacket.vPayload.begin(), pPacket.vPayload.end(), m_lPayloads[unPacketNum].begin());
         } else {
             m_lPayloads[unPacketNum] = pPacket.vPayload;
             m_pReceived[unPacketNum] = true;
@@ -35,7 +35,7 @@ namespace streamprotocol {
         std::vector<unsigned char> vJoined;
 
         for(std::vector<unsigned char>& vPayload : m_lPayloads) 
-            vJoined.insert(vJoined.begin(), vPayload.begin(), vPayload.end());
+            vJoined.insert(vJoined.end(), vPayload.begin(), vPayload.end());
 
         cv::imdecode(cv::Mat(vJoined), cv::IMREAD_COLOR, &cvReconsructImg);
         return true;
@@ -43,22 +43,22 @@ namespace streamprotocol {
     
     void PackifyImage(const cv::Mat& cvImage, std::vector<ImagePacket>& vImagePacketArray) {
         // Compress image.
-         std::vector<int> vParans = {cv::IMWRITE_JPEG_QUALITY, 90}; 
+        std::vector<int> vParans = {cv::IMWRITE_JPEG_QUALITY, 90}; 
         std::vector<uchar> vBuffer;
         cv::imencode(".jpg", cvImage, vBuffer, vParans);
 
         // Split the image into separate chunks
-        uint8_t unNumOfChunks = ceil(vBuffer.size() / UDP_PAYLOAD_LIMIT);
+        uint8_t unNumOfChunks = ceil((double)vBuffer.size() / (double)UDP_PAYLOAD_LIMIT);
 
         vImagePacketArray.assign(unNumOfChunks, ImagePacket());
 
-        for(uint16_t unIdx = 0; unIdx < unNumOfChunks; ++unIdx) {
+        for(uint32_t unIdx = 0; unIdx < unNumOfChunks; ++unIdx) {
             // Find range of data belonging to this chunk.
-            uint16_t unStartIdx = unIdx * UDP_PAYLOAD_LIMIT;
-            uint16_t unEndIdx = std::min(unStartIdx + UDP_PAYLOAD_LIMIT, (int)vBuffer.size());
+            uint32_t unStartIdx = unIdx * UDP_PAYLOAD_LIMIT;
+            uint32_t unEndIdx = std::min(unStartIdx + UDP_PAYLOAD_LIMIT, (unsigned int)vBuffer.size());
 
             // Determine size of this chunks payload.
-            uint16_t unChunkSize = unEndIdx - unStartIdx;
+            uint32_t unChunkSize = unEndIdx - unStartIdx;
 
             // Construct packet.
             vImagePacketArray[unIdx].unPacketNum = unIdx;

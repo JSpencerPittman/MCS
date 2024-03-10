@@ -1,5 +1,7 @@
 #include <iostream>
+#include <opencv2/opencv.hpp>
 #include "udp.h"
+#include "stream_protocol.h"
 
 #define IP_ADDR "127.0.0.1"
 #define PORT 8000
@@ -13,9 +15,16 @@ int main() {
 
     std::cout << "START " << udp::StartSocket(client) << std::endl;
 
-    std::string sMessage = "Hello server!";
-    std::vector<unsigned char> sSend(sMessage.begin(), sMessage.end());
-    std::cout << "SENT " << udp::Send(client, sSend) << std::endl;
+    cv::Mat sample = cv::imread("sample.jpg");
+    std::vector<streamprotocol::ImagePacket> packets;
+    streamprotocol::PackifyImage(sample, packets);
+
+    std::vector<unsigned char> buffer;
+    for(streamprotocol::ImagePacket& packet : packets) {
+        streamprotocol::EncodeImagePacket(packet, buffer);
+        std::cout << "BUFFSIZE: " << packet.unPayloadSize << std::endl;
+        std::cout << "SENT " << udp::Send(client, buffer) << std::endl;
+    }
 
     udp::CloseSocket(client);
 }

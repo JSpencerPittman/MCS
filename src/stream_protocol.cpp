@@ -2,6 +2,45 @@
 
 namespace streamprotocol {
 
+    ImageReconstructor::ImageReconstructor(): m_bFirst(true), m_unReceivedCnt(0) {}
+
+    void ImageReconstructor::Submit(const ImagePacket& pPacket) {
+        if(m_bFirst) {
+            m_bFirst = false;
+            m_unNumOfPacketsPerImage = pPacket.unPacketsPerImage;
+
+            m_pReceived = new bool[m_unNumOfPacketsPerImage];
+            std::fill(m_pReceived, m_pReceived+m_unNumOfPacketsPerImage, false);
+
+            m_lPayloads.resize(m_unNumOfPacketsPerImage);
+        }
+
+        uint16_t unPacketNum = pPacket.unPacketNum;
+        if(m_pReceived[unPacketNum]) {
+            std::copy(m_lPayloads[unPacketNum].begin(), m_lPayloads[unPacketNum].end(), pPacket.vPayload.begin());
+        } else {
+            m_lPayloads[unPacketNum] = pPacket.vPayload;
+            m_pReceived[unPacketNum] = true;
+            ++m_unReceivedCnt;
+        }
+    }
+
+    bool ImageReconstructor::Ready() const {
+        return m_unReceivedCnt == m_unNumOfPacketsPerImage;
+    }
+
+    bool ImageReconstructor::Reconstruct(cv::Mat& cvReconsructImg) {
+        if(!Ready()) return false;
+
+        std::vector<unsigned char> vJoined;
+
+        for(std::vector<unsigned char>& vPayload : m_lPayloads) 
+            vJoined.insert(vJoined.begin(), vPayload.begin(), vPayload.end());
+
+        cv::imdecode(cv::Mat(vJoined), cv::IMREAD_COLOR, &cvReconsructImg);
+        return true;
+    }
+    
     void PackifyImage(const cv::Mat& cvImage, std::vector<ImagePacket>& vImagePacketArray) {
         // Compress image.
          std::vector<int> vParans = {cv::IMWRITE_JPEG_QUALITY, 90}; 

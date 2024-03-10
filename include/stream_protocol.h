@@ -9,19 +9,29 @@
 
 namespace streamprotocol {
 
-    class ImageReconstructor {
-    public:
-        ImageReconstructor();
-
-    private:
-    };
-
     struct ImagePacket {
         uint16_t unPacketNum;
         uint16_t unPacketsPerImage;
 
         std::vector<unsigned char> vPayload;
         uint16_t unPayloadSize;
+    };
+
+    class ImageReconstructor {
+        public:
+            ImageReconstructor();
+
+            void Submit(const ImagePacket& pPacket);
+            bool Ready() const;
+            bool Reconstruct(cv::Mat& cvReconsructImg);
+
+
+        private:
+            bool m_bFirst;
+            uint16_t m_unNumOfPacketsPerImage;
+            bool* m_pReceived;
+            uint16_t m_unReceivedCnt;
+            std::vector<std::vector<unsigned char>> m_lPayloads;
     };
 
     void PackifyImage(const cv::Mat& cvImage, std::vector<ImagePacket>& vImagePacketArray);

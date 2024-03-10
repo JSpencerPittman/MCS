@@ -4,25 +4,33 @@ namespace streamprotocol {
 
     ImageReconstructor::ImageReconstructor(): m_bFirst(true), m_unReceivedCnt(0) {}
 
-    void ImageReconstructor::Submit(const ImagePacket& pPacket) {
+    bool ImageReconstructor::Submit(const ImagePacket& stPacket) {
         if(m_bFirst) {
             m_bFirst = false;
-            m_unNumOfPacketsPerImage = pPacket.unPacketsPerImage;
+            m_unNumOfPacketsPerImage = stPacket.unPacketsPerImage;
 
             m_pReceived = new bool[m_unNumOfPacketsPerImage];
             std::fill(m_pReceived, m_pReceived+m_unNumOfPacketsPerImage, false);
 
-            m_lPayloads.resize(m_unNumOfPacketsPerImage);
+            m_vPayloads.resize(m_unNumOfPacketsPerImage);
         }
 
-        uint16_t unPacketNum = pPacket.unPacketNum;
+        uint16_t unPacketNum = stPacket.unPacketNum;
+
+        if(unPacketNum >= stPacket.unPacketsPerImage)
+            return false;
+        if(m_pReceived[unPacketNum] && stPacket.unPayloadSize != (uint16_t) m_vPayloads[unPacketNum].size())
+            return false;
+
         if(m_pReceived[unPacketNum]) {
-            std::copy(pPacket.vPayload.begin(), pPacket.vPayload.end(), m_lPayloads[unPacketNum].begin());
+            std::copy(stPacket.vPayload.begin(), stPacket.vPayload.end(), m_vPayloads[unPacketNum].begin());
         } else {
-            m_lPayloads[unPacketNum] = pPacket.vPayload;
+            m_vPayloads[unPacketNum] = stPacket.vPayload;
             m_pReceived[unPacketNum] = true;
             ++m_unReceivedCnt;
         }
+
+        return true;
     }
 
     bool ImageReconstructor::Ready() const {
@@ -34,28 +42,28 @@ namespace streamprotocol {
 
         std::vector<unsigned char> vJoined;
 
-        for(std::vector<unsigned char>& vPayload : m_lPayloads) 
+        for(std::vector<unsigned char>& vPayload : m_vPayloads) 
             vJoined.insert(vJoined.end(), vPayload.begin(), vPayload.end());
 
         cv::imdecode(cv::Mat(vJoined), cv::IMREAD_COLOR, &cvReconsructImg);
-        return true;
+        return !cvReconsructImg.empty();
     }
     
     void PackifyImage(const cv::Mat& cvImage, std::vector<ImagePacket>& vImagePacketArray) {
         // Compress image.
-        std::vector<int> vParans = {cv::IMWRITE_JPEG_QUALITY, 90}; 
+        std::vector<int> vParans = {cv::IMWRITE_JPEG_QUALITY, SP_JPEG_QUALITY}; 
         std::vector<uchar> vBuffer;
-        cv::imencode(".jpg", cvImage, vBuffer, vParans);
+        cv::imencode(SP_IMAGE_FORMAT, cvImage, vBuffer, vParans);
 
         // Split the image into separate chunks
-        uint8_t unNumOfChunks = ceil((double)vBuffer.size() / (double)UDP_PAYLOAD_LIMIT);
+        uint8_t unNumOfChunks = ceil((double)vBuffer.size() / (double)SP_PAYLOAD_LIMIT);
 
         vImagePacketArray.assign(unNumOfChunks, ImagePacket());
 
         for(uint32_t unIdx = 0; unIdx < unNumOfChunks; ++unIdx) {
             // Find range of data belonging to this chunk.
-            uint32_t unStartIdx = unIdx * UDP_PAYLOAD_LIMIT;
-            uint32_t unEndIdx = std::min(unStartIdx + UDP_PAYLOAD_LIMIT, (unsigned int)vBuffer.size());
+            uint32_t unStartIdx = unIdx * SP_PAYLOAD_LIMIT;
+            uint32_t unEndIdx = std::min(unStartIdx + SP_PAYLOAD_LIMIT, (unsigned int)vBuffer.size());
 
             // Determine size of this chunks payload.
             uint32_t unChunkSize = unEndIdx - unStartIdx;
@@ -71,7 +79,7 @@ namespace streamprotocol {
     }
 
     void EncodeImagePacket(ImagePacket& stImagePacket, std::vector<unsigned char>& vEncodedImage) {
-        vEncodedImage.assign(40+stImagePacket.unPayloadSize, 0);
+        vEncodedImage.assign(SP_HEADER_SIZE+stImagePacket.unPayloadSize, 0);
         
         std::vector<std::string> vHeader = {
             "STREAM",
@@ -87,21 +95,22 @@ namespace streamprotocol {
         copy(stImagePacket.vPayload.begin(), stImagePacket.vPayload.end(), vEncodedImage.begin() + 40);
     }
 
-    bool DecodeImagePacket(std::vector<unsigned char>& vEncodedImage, ImagePacket& pImagePacket) {
-        if(vEncodedImage.size() <= 40) return false;
-        std::string sIdentifier(vEncodedImage.begin(), vEncodedImage.begin()+10);
+    bool DecodeImagePacket(std::vector<unsigned char>& vEncodedImage, ImagePacket& stImagePacket) {
+        if(vEncodedImage.size() <= SP_HEADER_SIZE) return false;
+        std::string sIdentifier(vEncodedImage.begin(), vEncodedImage.begin() + SP_HEADER_FIELD_SIZE);
+
         if(sIdentifier.find_first_of("STREAM") == std::string::npos) return false;
-        std::string sPacketNum(vEncodedImage.begin()+10, vEncodedImage.begin()+20);
-        std::string sPacketsPerImage(vEncodedImage.begin()+20, vEncodedImage.begin()+30);
-        std::string sPayloadSize(vEncodedImage.begin()+30, vEncodedImage.begin()+40);
 
-        std::vector<unsigned char> vPayload(vEncodedImage.begin()+80, vEncodedImage.end());
+        std::string sPacketNum(vEncodedImage.begin() + SP_HEADER_FIELD_SIZE, vEncodedImage.begin() + 2 * SP_HEADER_FIELD_SIZE);
+        std::string sPacketsPerImage(vEncodedImage.begin()+ 2 * SP_HEADER_FIELD_SIZE, vEncodedImage.begin() + 3 * SP_HEADER_FIELD_SIZE);
+        std::string sPayloadSize(vEncodedImage.begin() + 3 * SP_HEADER_FIELD_SIZE, vEncodedImage.begin() + SP_HEADER_SIZE);
 
-        pImagePacket.unPacketNum = (uint16_t) std::stoi(sPacketNum);
-        pImagePacket.unPacketsPerImage = (uint16_t) std::stoi(sPacketsPerImage);
-        pImagePacket.unPayloadSize = (uint16_t) std::stoi(sPayloadSize);
+        stImagePacket.unPacketNum = (uint16_t) std::stoi(sPacketNum);
+        stImagePacket.unPacketsPerImage = (uint16_t) std::stoi(sPacketsPerImage);
+        stImagePacket.unPayloadSize = (uint16_t) std::stoi(sPayloadSize);
         
-        pImagePacket.vPayload = std::vector<unsigned char>(vEncodedImage.begin()+40, vEncodedImage.end());
+        stImagePacket.vPayload = std::vector<unsigned char>(vEncodedImage.begin()+SP_HEADER_SIZE, vEncodedImage.end());
+
         return true;
     }
 

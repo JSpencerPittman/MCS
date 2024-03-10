@@ -5,7 +5,11 @@
 #include <algorithm>
 #include <opencv2/opencv.hpp>
 
-#define UDP_PAYLOAD_LIMIT 64000
+#define SP_PAYLOAD_LIMIT 64000
+#define SP_JPEG_QUALITY 90
+#define SP_HEADER_SIZE 40
+#define SP_HEADER_FIELD_SIZE 10
+#define SP_IMAGE_FORMAT ".jpg"
 
 namespace streamprotocol {
 
@@ -21,7 +25,7 @@ namespace streamprotocol {
         public:
             ImageReconstructor();
 
-            void Submit(const ImagePacket& pPacket);
+            bool Submit(const ImagePacket& stPacket);
             bool Ready() const;
             bool Reconstruct(cv::Mat& cvReconsructImg);
 
@@ -31,13 +35,13 @@ namespace streamprotocol {
             uint16_t m_unNumOfPacketsPerImage;
             bool* m_pReceived;
             uint16_t m_unReceivedCnt;
-            std::vector<std::vector<unsigned char>> m_lPayloads;
+            std::vector<std::vector<unsigned char>> m_vPayloads;
     };
 
     void PackifyImage(const cv::Mat& cvImage, std::vector<ImagePacket>& vImagePacketArray);
 
-    void EncodeImagePacket(ImagePacket& pImagePacket, std::vector<unsigned char>& vEncodedImage);
-    bool DecodeImagePacket(std::vector<unsigned char>& vEncodedImage, ImagePacket& pImagePacket);
+    void EncodeImagePacket(ImagePacket& stImagePacket, std::vector<unsigned char>& vEncodedImage);
+    bool DecodeImagePacket(std::vector<unsigned char>& vEncodedImage, ImagePacket& stImagePacket);
 
 };
 

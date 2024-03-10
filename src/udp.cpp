@@ -1,5 +1,7 @@
 #include "udp.h"
 
+#pragma comment(lib, "Ws2_32.lib")
+
 namespace udp {
 
     Socket::Socket(const std::string& ipAddr, uint16_t port, bool reciever) {
@@ -16,6 +18,14 @@ namespace udp {
     }
 
     bool StartSocket(Socket& stSocket) {
+        WSADATA wsaData;
+
+        int iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+        if (iResult != 0) {
+            printf("WSAStartup failed: %d\n", iResult);
+            return 1;
+        }
+           
         int nFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
         if(nFileDescriptor < 0) return false;
         else stSocket.nFileDescriptor = nFileDescriptor;
@@ -29,14 +39,14 @@ namespace udp {
     }
 
     void CloseSocket(Socket& stSocket) {
-        close(stSocket.nFileDescriptor);
+        closesocket(stSocket.nFileDescriptor);
     }
 
     bool Send(Socket& stSocket, std::vector<unsigned char>& sMessage) {
         int nResult = sendto(stSocket.nFileDescriptor,
-               sMessage.data(),
+               (const char*) sMessage.data(),
                sMessage.size(),
-               MSG_CONFIRM,
+               0,
                (const sockaddr *) &stSocket.stRecieverAddress,
                sizeof(stSocket.stRecieverAddress));
         return nResult >= 0 ? true : false;
@@ -45,16 +55,14 @@ namespace udp {
     void Receive(Socket& stSocket, std::vector<unsigned char>& sMessage, uint64_t unBufferSize) {
         // char aBuffer[unBufferSize];
         unsigned char* pBuffer = new unsigned char[unBufferSize];
-        socklen_t siAddrLen = sizeof(stSocket.stSenderAddress);
+        int siAddrLen = sizeof(stSocket.stSenderAddress);
+        
         int nMessageLength = recvfrom(stSocket.nFileDescriptor, 
-                // (char *) aBuffer,
-                pBuffer, 
+                (char*) pBuffer, 
                 unBufferSize, 
                 MSG_WAITALL, 
                 (sockaddr *) &stSocket.stSenderAddress, 
                 &siAddrLen);
-        // aBuffer[nMessageLength] = '\0';
-        // sMessage = std::string(aBuffer);
         sMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
     }
 

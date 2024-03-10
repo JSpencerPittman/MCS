@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.22)
 project(MCS)
 
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g")
 
 find_package(OpenCV REQUIRED)
 

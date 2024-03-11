@@ -53,17 +53,18 @@ namespace udp {
     }
 
     void Receive(Socket& stSocket, std::vector<unsigned char>& sMessage, uint64_t unBufferSize) {
-        // char aBuffer[unBufferSize];
         unsigned char* pBuffer = new unsigned char[unBufferSize];
         int siAddrLen = sizeof(stSocket.stSenderAddress);
         
         int nMessageLength = recvfrom(stSocket.nFileDescriptor, 
                 (char*) pBuffer, 
                 unBufferSize, 
-                MSG_WAITALL, 
+                0, 
                 (sockaddr *) &stSocket.stSenderAddress, 
                 &siAddrLen);
+
         sMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
+        delete [] pBuffer;
     }
 
 };

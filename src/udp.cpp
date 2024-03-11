@@ -36,7 +36,7 @@ namespace udp {
         int nResult = sendto(stSocket.nFileDescriptor,
                sMessage.data(),
                sMessage.size(),
-               MSG_CONFIRM,
+               0,
                (const sockaddr *) &stSocket.stRecieverAddress,
                sizeof(stSocket.stRecieverAddress));
         return nResult >= 0 ? true : false;

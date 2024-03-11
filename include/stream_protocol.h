@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <opencv2/opencv.hpp>
 
-#define SP_PAYLOAD_LIMIT 64000
+#define SP_PAYLOAD_LIMIT 9000
 #define SP_JPEG_QUALITY 90
 #define SP_HEADER_SIZE 40
 #define SP_HEADER_FIELD_SIZE 10

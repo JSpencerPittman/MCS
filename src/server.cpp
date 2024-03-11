@@ -8,22 +8,6 @@
 using namespace std;
 
 int main() {
-	cout << "Starting Server..." << endl;
-
-	udp::Socket sock(IP_ADDR, PORT, true);
-
-	std::cout << "START " << udp::StartSocket(sock) << std::endl;
-
-	std::vector<unsigned char> buffer;
-	udp::Receive(sock, buffer, 65000);
-	std::cout << "RECEIVED: " << buffer.size() << std::endl;
-	std::string sMessage(buffer.begin(), buffer.end());
-	std::cout << sMessage << std::endl;
-
-	udp::CloseSocket(sock);
-}
-
-/*int main() {
 	cout << "Starting Client..." << endl;
 
 	udp::Socket sock(IP_ADDR, PORT, true);
@@ -49,4 +33,4 @@ int main() {
 	cv::imwrite("output.jpg", frame);
 
 	udp::CloseSocket(sock);
-}*/
+}

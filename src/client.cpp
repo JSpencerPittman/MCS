@@ -15,22 +15,7 @@ int main() {
 
     std::cout << "START " << udp::StartSocket(client) << std::endl;
 
-    std::string sMessage = "HOWDY";
-
-    std::vector<unsigned char> buffer(sMessage.begin(), sMessage.end());
-    std::cout << "SENT " << udp::Send(client, buffer) << std::endl;
-
-    udp::CloseSocket(client);
-}
-
-/*int main() {
-    cout << "Starting Client..." << endl;
-
-    udp::Socket client(IP_ADDR, PORT, false);
-
-    std::cout << "START " << udp::StartSocket(client) << std::endl;
-
-    cv::Mat sample = cv::imread("sample.jpg");
+    cv::Mat sample = cv::imread("C:/Users/Jason/Work/URT/MCS/sample.jpg");
     std::vector<streamprotocol::ImagePacket> packets;
     streamprotocol::PackifyImage(sample, packets);
 
@@ -42,4 +27,4 @@ int main() {
     }
 
     udp::CloseSocket(client);
-}*/
+}

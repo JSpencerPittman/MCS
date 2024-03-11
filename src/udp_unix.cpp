@@ -28,14 +28,14 @@ namespace udp {
     }
 
     bool UDPUnixSocket::Close() {
-        close(m_nFileDescriptor);
+        return close(m_nFileDescriptor) >= 0;
     }
 
     bool UDPUnixSocket::Send(std::vector<unsigned char>& vMessage) {
          int nResult = sendto(m_nFileDescriptor,
                vMessage.data(),
                vMessage.size(),
-               MSG_CONFIRM,
+               0,
                (const sockaddr *) &m_stRecieverAddress,
                sizeof(m_stRecieverAddress));
         return nResult >= 0 ? true : false;
@@ -51,5 +51,6 @@ namespace udp {
                 (sockaddr *) &m_stSenderAddress, 
                 &siAddrLen);
         vMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
+        return nMessageLength >= 0;
     }
 };

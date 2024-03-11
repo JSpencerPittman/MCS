@@ -1,34 +1,27 @@
 #ifndef UDP_UNIX_H
 #define UDP_UNIX_H
 
-#include <cstdint>
-#include <string>
-#include <vector>
-#include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <cstring>
+
+#include "udp.hpp"
 
 namespace udp {
 
-    struct Socket {
-        Socket(const std::string& ipAddr, uint16_t port, bool reciever);
+    class UDPUnixSocket : UDPSocket<sockaddr_in> {
+        public:
+            UDPUnixSocket(const std::string& ipAddr, uint16_t port, bool receiver);
 
-        uint16_t unPort;
-        std::string sIPAddr;
-        bool bReceiver;
-        int nFileDescriptor;
+            bool Start() override;
+            bool Close() override;
 
-        sockaddr_in stSenderAddress;
-        sockaddr_in stRecieverAddress;
-    }; 
+            bool Send(std::vector<unsigned char>& vMessage) override;
+            bool Receive(std::vector<unsigned char>& vMessage, uint64_t unBufferSize) override;
+    };
 
-    bool StartSocket(Socket& stSocket);
-    void CloseSocket(Socket& stSocket);
-
-    bool Send(Socket& stSocket, std::vector<unsigned char>& sMessage);
-    void Receive(Socket& stSocket, std::vector<unsigned char>& sMessage, uint64_t unBufferSize);
 };
 
 #endif

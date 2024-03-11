@@ -1,61 +1,55 @@
-#include "udp.h"
+#include "udp_unix.h"
 
 namespace udp {
 
-    Socket::Socket(const std::string& ipAddr, uint16_t port, bool reciever) {
-        sIPAddr = ipAddr;
-        unPort = port;
-        bReceiver = reciever;
+    UDPUnixSocket::UDPUnixSocket(const std::string& ipAddr, uint16_t port, bool receiver):
+        UDPSocket(ipAddr, port, receiver) {
 
-        memset(&stSenderAddress, 0, sizeof(sockaddr_in));
-        memset(&stRecieverAddress, 0, sizeof(sockaddr_in));
+        memset(&m_stSenderAddress, 0, sizeof(sockaddr_in));
+        memset(&m_stRecieverAddress, 0, sizeof(sockaddr_in));
 
-        stRecieverAddress.sin_family = AF_INET;
-        stRecieverAddress.sin_port = htons(port);
-        stRecieverAddress.sin_addr.s_addr = inet_addr(ipAddr.c_str());
+
+        m_stRecieverAddress.sin_family = AF_INET;
+        m_stRecieverAddress.sin_port = htons(port);
+        m_stRecieverAddress.sin_addr.s_addr = inet_addr(ipAddr.c_str());
     }
 
-    bool StartSocket(Socket& stSocket) {
+    bool UDPUnixSocket::Start() {
         int nFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
         if(nFileDescriptor < 0) return false;
-        else stSocket.nFileDescriptor = nFileDescriptor;
+        else m_nFileDescriptor = nFileDescriptor;
 
-        if(stSocket.bReceiver) {
-            int nResult = bind(stSocket.nFileDescriptor, (const sockaddr*) &stSocket.stRecieverAddress, sizeof(sockaddr));
+        if(m_bReceiver) {
+            int nResult = bind(m_nFileDescriptor, (const sockaddr*) &m_stRecieverAddress, sizeof(sockaddr));
             if(nResult < 0) return false;
         }
 
         return true;
     }
 
-    void CloseSocket(Socket& stSocket) {
-        close(stSocket.nFileDescriptor);
+    bool UDPUnixSocket::Close() {
+        close(m_nFileDescriptor);
     }
 
-    bool Send(Socket& stSocket, std::vector<unsigned char>& sMessage) {
-        int nResult = sendto(stSocket.nFileDescriptor,
-               sMessage.data(),
-               sMessage.size(),
+    bool UDPUnixSocket::Send(std::vector<unsigned char>& vMessage) {
+         int nResult = sendto(m_nFileDescriptor,
+               vMessage.data(),
+               vMessage.size(),
                MSG_CONFIRM,
-               (const sockaddr *) &stSocket.stRecieverAddress,
-               sizeof(stSocket.stRecieverAddress));
+               (const sockaddr *) &m_stRecieverAddress,
+               sizeof(m_stRecieverAddress));
         return nResult >= 0 ? true : false;
     }
 
-    void Receive(Socket& stSocket, std::vector<unsigned char>& sMessage, uint64_t unBufferSize) {
-        // char aBuffer[unBufferSize];
+    bool UDPUnixSocket::Receive(std::vector<unsigned char>& vMessage, uint64_t unBufferSize) {
         unsigned char* pBuffer = new unsigned char[unBufferSize];
-        socklen_t siAddrLen = sizeof(stSocket.stSenderAddress);
-        int nMessageLength = recvfrom(stSocket.nFileDescriptor, 
-                // (char *) aBuffer,
+        socklen_t siAddrLen = sizeof(m_stSenderAddress);
+        int nMessageLength = recvfrom(m_nFileDescriptor, 
                 pBuffer, 
                 unBufferSize, 
                 MSG_WAITALL, 
-                (sockaddr *) &stSocket.stSenderAddress, 
+                (sockaddr *) &m_stSenderAddress, 
                 &siAddrLen);
-        // aBuffer[nMessageLength] = '\0';
-        // sMessage = std::string(aBuffer);
-        sMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
+        vMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
     }
-
 };

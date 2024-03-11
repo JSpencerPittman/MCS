@@ -8,15 +8,16 @@
 namespace udp {
 
     template <typename SockAddrType>
-    class UdpSocket {
+    class UDPSocket {
         public:
-            UdpSocket(const std::string& ipAddr, uint16_t port, bool reciever);
+            UDPSocket(const std::string& ipAddr, uint16_t port, bool receiver): 
+                m_unPort(port), m_sIPAddr(ipAddr), m_bReceiver(receiver) {}
             
             virtual bool Start() = 0;
             virtual bool Close() = 0;
 
-            virtual bool Send(std::vector<unsigned char>& sMessage) = 0;
-            virtual bool Recieve(std::vector<unsigned char>& sMessage, uint64_t unBufferSize) = 0;
+            virtual bool Send(std::vector<unsigned char>& vMessage) = 0;
+            virtual bool Receive(std::vector<unsigned char>& vMessage, uint64_t unBufferSize) = 0;
 
         protected:
             uint16_t m_unPort;
@@ -26,8 +27,6 @@ namespace udp {
 
             SockAddrType m_stSenderAddress;
             SockAddrType m_stRecieverAddress;
-
-        private:
     };
 
 };

@@ -1,1 +1,8 @@
+# Build files
 build/
+
+# IDE
+.vscode/
+.vs/
+
+# Windows

@@ -43,7 +43,7 @@ namespace udp {
 
     bool UDPWindowSocket::Send(std::vector<unsigned char>& vMessage) {
         int nResult = sendto(m_nFileDescriptor,
-            vMessage.data(),
+            (const char*) vMessage.data(),
             vMessage.size(),
             0,
             (const sockaddr*)&m_stRecieverAddress,
@@ -53,13 +53,13 @@ namespace udp {
 
     bool UDPWindowSocket::Receive(std::vector<unsigned char>& vMessage, uint64_t unBufferSize) {
         unsigned char* pBuffer = new unsigned char[unBufferSize];
-        socklen_t siAddrLen = sizeof(m_stSenderAddress);
+        int nAddrLen = sizeof(m_stSenderAddress);
         int nMessageLength = recvfrom(m_nFileDescriptor,
             (char *) pBuffer,
             unBufferSize,
             0,
             (sockaddr*)&m_stSenderAddress,
-            &siAddrLen);
+            &nAddrLen);
 
         vMessage = std::vector<unsigned char>(pBuffer, pBuffer + nMessageLength);
         delete[] pBuffer;

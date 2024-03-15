@@ -1,5 +1,5 @@
-#ifndef UDP_H
-#define UDP_H
+#ifndef UDP_WINDOWS_H
+#define UDP_WINDOWS_H
 
 #include <cstdint>
 #include <string>
@@ -20,7 +20,7 @@ namespace udp {
 
         bool Send(std::vector<unsigned char>& vMessage) override;
         bool Receive(std::vector<unsigned char>& vMessage, uint64_t unBufferSize) override;
-    }
+    };
 
 };
 

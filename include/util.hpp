@@ -3,6 +3,8 @@
 
 #include <vector>
 
+#include <iostream>
+
 namespace util {
 
     typedef std::vector<unsigned char> ByteArray;
@@ -31,7 +33,8 @@ namespace util {
             throw std::invalid_argument("Provide a binary array that has a size divisible by eight.");
 
         unsigned int unTotalBytes = binArr.size() / 8;
-        ByteArray byteArr.reserve(unTotalBytes);
+        ByteArray byteArr;
+        byteArr.reserve(unTotalBytes);
 
         for(unsigned int unIdx = 0; unIdx < unTotalBytes; ++unIdx) {
             unsigned char unByte = 0;
@@ -51,7 +54,7 @@ namespace util {
         if(unFillTo) vBinary.reserve(unFillTo);
 
         while(tNum) {
-            vBinary.emplace_back(tNum & 1);
+            vBinary.push_back(tNum & 1);
             tNum = tNum >> 1;
         }
 

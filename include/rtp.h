@@ -32,6 +32,15 @@ namespace rtp {
     };
 
 
+    struct RTPPacket {
+        RTPHeaderFixed* pHeaderFixed;
+        RTPHeaderContributors* pHeaderContributers;
+        RTPHeaderExtension* pHeaderExtension;
+        std::vector<unsigned char> vPayload;
+    };
+
+    void SerializePacket(std::vector<unsigned char>& vSerializedPacket, const RTPPacket& stPacket);
+    void DeserializePacket(RTPPacket& stPacket, const std::vector<unsigned char>& vSerializedPacket);
 
 };
 

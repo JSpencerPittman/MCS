@@ -3,20 +3,22 @@
 
 #include <cstdint>
 #include <chrono>
+#include <vector>
+
+#include "util.hpp"
 
 namespace rtp {
-
-    typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::microseconds> RTPTimestamp;
 
     struct RTPHeaderFixed {
         uint8_t unVersion;
         bool bHasPadding;
+        uint8_t unPaddingFactor;
         bool bHasExtension;
         uint8_t unCC;
-        bool bMarket;
+        bool bMarker;
         uint8_t unPayloadType;
         uint16_t unSequenceNumber;
-        RTPTimestamp tmTimestamp;
+        uint32_t unTimestamp;
         uint32_t unSSRC;
     };
 
@@ -34,9 +36,9 @@ namespace rtp {
 
     struct RTPPacket {
         RTPHeaderFixed* pHeaderFixed;
-        RTPHeaderContributors* pHeaderContributers;
+        RTPHeaderContributors* pHeaderContributors;
         RTPHeaderExtension* pHeaderExtension;
-        std::vector<unsigned char> vPayload;
+        util::ByteArray vPayload;
     };
 
     void SerializePacket(std::vector<unsigned char>& vSerializedPacket, const RTPPacket& stPacket);

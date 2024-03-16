@@ -66,30 +66,30 @@ namespace rtp {
         BitArray vAggBits;
         vAggBits.reserve(2 * BITS_PER_BYTE);
 
-        BitArray vVersionBits = util::Binarize(m_unVersion, 2);
+        BitArray vVersionBits = conv::IntegerToBits(m_unVersion, 2);
         vAggBits.insert(vAggBits.end(), vVersionBits.begin(), vVersionBits.end());
 
         vAggBits.push_back(m_bHasExtension);
         vAggBits.push_back(m_bHasExtension);
 
-        BitArray vCCBits = util::Binarize(m_unCC, 4);
+        BitArray vCCBits = conv::IntegerToBits(m_unCC, 4);
         vAggBits.insert(vAggBits.end(), vCCBits.begin(), vCCBits.end());
 
         vAggBits.push_back(m_bMarker);
 
-        BitArray vPayloadTypeBits = util::Binarize(m_unPayloadType, 7);
+        BitArray vPayloadTypeBits = conv::IntegerToBits(m_unPayloadType, 7);
         vAggBits.insert(vAggBits.end(), vPayloadTypeBits.begin(), vPayloadTypeBits.end());
 
-        ByteArray vParamBytes = util::Bytify(vAggBits);
+        ByteArray vParamBytes = conv::BitsToBytes(vAggBits);
         vFixedBytes.insert(vFixedBytes.end(), vParamBytes.begin(), vParamBytes.end());
 
-        ByteArray vSeqNumBytes = util::SerializeInteger(m_unSequenceNumber, true);
+        ByteArray vSeqNumBytes = conv::IntegerToBytes(m_unSequenceNumber, true);
         vFixedBytes.insert(vFixedBytes.end(), vSeqNumBytes.begin(), vSeqNumBytes.end());
 
-        ByteArray vTimestampBytes = util::SerializeInteger(m_unTimestamp, true);
+        ByteArray vTimestampBytes = conv::IntegerToBytes(m_unTimestamp, true);
         vFixedBytes.insert(vFixedBytes.end(), vTimestampBytes.begin(), vTimestampBytes.end());
 
-        ByteArray vSSRCBytes = util::SerializeInteger(m_unSSRC, true);
+        ByteArray vSSRCBytes = conv::IntegerToBytes(m_unSSRC, true);
         vFixedBytes.insert(vFixedBytes.end(), vSSRCBytes.begin(), vSSRCBytes.end());
 
         return vFixedBytes;
@@ -100,7 +100,7 @@ namespace rtp {
         vContribBytes.reserve(BYTES_PER_WORD * m_unCC);
 
         for (Word unContributor : m_vContributors) {
-            ByteArray vCBytes = util::SerializeInteger(unContributor, true);
+            ByteArray vCBytes = conv::IntegerToBytes(unContributor, true);
             vContribBytes.insert(vContribBytes.end(), vCBytes.begin(), vCBytes.end());
         }
 
@@ -113,14 +113,14 @@ namespace rtp {
         ByteArray vExtensionBytes;
         vExtensionBytes.reserve(BYTES_PER_WORD + m_unExtWordCnt * BYTES_PER_WORD);
 
-        ByteArray vProfileBytes = util::SerializeInteger(m_unProfile, true);
+        ByteArray vProfileBytes = conv::IntegerToBytes(m_unProfile, true);
         vExtensionBytes.insert(vExtensionBytes.end(), vProfileBytes.begin(), vProfileBytes.end());
 
-        ByteArray vWordCntBytes = util::SerializeInteger(m_unExtWordCnt, true);
+        ByteArray vWordCntBytes = conv::IntegerToBytes(m_unExtWordCnt, true);
         vExtensionBytes.insert(vExtensionBytes.end(), vWordCntBytes.begin(), vWordCntBytes.end());
 
         for (Word unExtWord : m_vExtension) {
-            ByteArray vExtWordBytes = util::SerializeInteger(unExtWord, true);
+            ByteArray vExtWordBytes = conv::IntegerToBytes(unExtWord, true);
             vExtensionBytes.insert(vExtensionBytes.end(), vExtWordBytes.begin(), vExtWordBytes.end());
         }
 

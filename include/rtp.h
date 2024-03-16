@@ -138,8 +138,69 @@ namespace rtp {
         util::ByteArray vPayload;
     };
 
-    void SerializePacket(std::vector<unsigned char>& vSerializedPacket, const RTPPacket& stPacket);
-    void DeserializePacket(RTPPacket& stPacket, const std::vector<unsigned char>& vSerializedPacket);
+    namespace conv {
+
+        template<typename T>
+        inline ByteArray IntegerToBytes(T tInteger, bool bBigEndian = false) {
+            size_t siNumOfBytes = sizeof(tInteger);
+            ByteArray vBytes;
+            vBytes.reserve(siNumOfBytes);
+
+            for (size_t siIdx = 0; siIdx < siNumOfBytes; ++siIdx) {
+                vBytes.emplace_back(tInteger & 0xFF);
+                tInteger = (unsigned int)tInteger >> 8;
+            }
+
+            if (bBigEndian)
+                vBytes = ByteArray(vBytes.rbegin(), vBytes.rend());
+
+            return vBytes;
+        }
+
+        template<typename T>
+        inline BitArray IntegerToBits(T tInteger, size_t siFillTo = 0) {
+            BitArray vBits;
+            if (siFillTo) vBits.reserve(siFillTo);
+
+            while (tInteger) {
+                vBits.push_back(tInteger & 1);
+                tInteger = tInteger >> 1;
+            }
+
+            if (vBits.size() < siFillTo)
+                vBits.resize(siFillTo, false);
+
+            vBits = BitArray(vBits.rbegin(), vBits.rend());
+
+            return vBits;
+        }
+
+
+        inline ByteArray BitsToBytes(const BitArray& vBits) {
+            size_t siPadBits = 8 - (vBits.size() % 8);
+            size_t siTotalBytes = (vBits.size() + siPadBits) / 8;
+
+            ByteArray vBytes;
+            vBytes.reserve(siTotalBytes);
+
+            for (size_t siByteIdx = 0; siByteIdx < siTotalBytes; ++siByteIdx) {
+                Byte unByte = 0;
+                for (size_t siBitIdx = 0; siBitIdx < 8; ++siBitIdx) {
+                    size_t siBitNum = (siByteIdx * BITS_PER_BYTE) + siBitIdx;
+
+                    if (siBitNum < siPadBits) continue;
+                    else siBitNum - siPadBits;
+                    
+                    if (vBits[siBitNum]) unByte += std::pow(2, 7 - siBitIdx);
+                    
+                }
+                vBytes.push_back(unByte);
+            }
+
+            return vBytes;
+        }
+
+    };
 
 };
 

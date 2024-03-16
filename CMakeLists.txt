@@ -3,18 +3,27 @@ cmake_minimum_required(VERSION 3.22)
 project(MCS)
 
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -g")
 
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(include)
 
-file(GLOB SRC_FILES src/udp_unix.cpp src/stream_protocol.cpp)
+if(WIN32)
+    message(STATUS "Building for Windows")
+	file(GLOB_RECURSE PLATFORM_SRC_FILES src/udp_windows.cpp)
+endif (WIN32)
 
-add_executable(Client src/client.cpp ${SRC_FILES})
-add_executable(Server src/server.cpp ${SRC_FILES})
-add_executable(Dev src/dev.cpp ${SRC_FILES})
+if(UNIX OR APPLE)
+	message(STATUS "Building for UNIX")
+	file(GLOB_RECURSE PLATFORM_SRC_FILES src/udp_unix.cpp)
+endif(UNIX OR APPLE)
+
+file(GLOB GENERAL_SRC_FILES src/stream_protocol.cpp)
+
+add_executable(Client src/client.cpp ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})
+add_executable(Server src/server.cpp ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})
+add_executable(Dev src/dev.cpp ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})
 
 target_link_libraries(Client ${OpenCV_LIBS})
 target_link_libraries(Server ${OpenCV_LIBS})

@@ -1,6 +1,13 @@
 #include <iostream>
 #include <stream_protocol.h>
+
+#ifdef _WIN32
+#include "udp_windows.h"
+typedef udp::UDPWindowSocket UDPPlatformSocket;
+#else
 #include "udp_unix.h"
+typedef udp::UDPUnixSocket UDPPlatformSocket;
+#endif
 
 #define IP_ADDR "127.0.0.1"
 #define PORT 8000
@@ -10,7 +17,7 @@ using namespace std;
 int main() {
     cout << "Starting Server..." << endl;
 
-    udp::UDPUnixSocket server(IP_ADDR, PORT, true);
+    UDPPlatformSocket server(IP_ADDR, PORT, true);
 
     std::cout << "START " << server.Start() << std::endl;
 
@@ -26,11 +33,11 @@ int main() {
         if(reconstruct.Ready()) break;
     }
 
-    cv::Mat frame;
-    bool result = reconstruct.Reconstruct(frame);
-    std::cout << "RESULT: " << result << std::endl;
+	cv::Mat frame;
+	bool result = reconstruct.Reconstruct(frame);
+	std::cout << "RESULT: " << result << std::endl;
 
-    cv::imwrite("output.jpg", frame);
+	cv::imwrite("output.jpg", frame);
 
     server.Close();
 }

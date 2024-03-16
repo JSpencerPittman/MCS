@@ -1,128 +1,143 @@
 #include "rtp.h"
 
-#define RTP_FIXEDHEADER_SIZE 12
-#define BYTE_SIZE 8
-
 namespace rtp {
 
-    void SerializePacket(std::vector<unsigned char>& vSerializedPacket, const RTPPacket& stPacket) {
-        unsigned int unPacketSize = 0;
+    RTPPacket::RTPPacket() : 
+        m_unVersion(2), m_unPayloadType(0),
+        m_bMarker(false), m_unSequenceNumber(0),
+        m_unTimestamp(0), m_unSSRC(0),
+        m_unCC(0), m_bHasExtension(false),
+        m_unProfile(0), m_unExtWordCnt(0),
+        m_bHasPadding(false), m_unPaddingFactor(0) {}
 
-        /* --- Fixed Header --- */
-        RTPHeaderFixed* pFixed = stPacket.pHeaderFixed;
+    void RTPPacket::AddContributor(Word unContributor) {
+        ++m_unCC;
+        m_vContributors.push_back(unContributor);
+    }
 
-        if(pFixed == nullptr)
-            throw std::invalid_argument("RTP packet has no fixed header.");
+    void RTPPacket::AddContributors(WordArray vContributors) {
+        m_unCC += vContributors.size();
+        m_vContributors.insert(m_vContributors.begin(), vContributors.begin(), vContributors.end());
+    }
 
-        util::ByteArray byteFixed;
-        byteFixed.reserve(RTP_FIXEDHEADER_SIZE);
+    void RTPPacket::SetExtension(Half unProfile, const WordArray& vExtension) {
+        m_bHasExtension = true;
+        m_unProfile = unProfile;
+        m_unExtWordCnt = vExtension.size();
+        m_vExtension = vExtension;
+    }
+
+    void RTPPacket::SetExtension(const WordArray& vExtension) {
+        m_bHasExtension = true;
+        m_unExtWordCnt = vExtension.size();
+        m_vExtension = vExtension;
+    }
+
+    void RTPPacket::SetPadding(Byte unPaddingFactor) {
+        m_bHasPadding = true;
+        m_unPaddingFactor = unPaddingFactor;
+    }
+
+    ByteArray RTPPacket::Serialize() const {
+        ByteArray vFixedBytes = SerializeFixedHeader();
+        ByteArray vContribBytes = SerializeContributions();
+        ByteArray vExtensionBytes = SerializeExtension();
         
-        util::BinArray binAgg;
-        binAgg.reserve(2 * BYTE_SIZE);
+        Word unPacketSize = vFixedBytes.size() + vContribBytes.size() + vExtensionBytes.size() + m_vPayload.size();
+        ByteArray vPaddingBytes = GeneratePadding(unPacketSize);
+        unPacketSize += vPaddingBytes.size();
 
-        util::BinArray binVersion = util::Binarize(pFixed->unVersion, 2);
-        std::copy(binVersion.begin(), binVersion.end(), binAgg.end());
+        ByteArray vSerializedBytes;
+        vSerializedBytes.reserve(unPacketSize);
 
-        binAgg.push_back(pFixed->bHasPadding);
-        binAgg.push_back(pFixed->bHasExtension);
+        vSerializedBytes.insert(vSerializedBytes.end(), vFixedBytes.begin(), vFixedBytes.end());
+        vSerializedBytes.insert(vSerializedBytes.end(), vContribBytes.begin(), vContribBytes.end());
+        vSerializedBytes.insert(vSerializedBytes.end(), vExtensionBytes.begin(), vExtensionBytes.end());
+        vSerializedBytes.insert(vSerializedBytes.end(), m_vPayload.begin(), m_vPayload.end());
+        vSerializedBytes.insert(vSerializedBytes.end(), vPaddingBytes.begin(), vPaddingBytes.end());
 
-        util::BinArray binCC = util::Binarize(pFixed->unCC, 4);
-        std::copy(binCC.begin(), binCC.end(), binAgg.end());
+        return vSerializedBytes;
+    }
 
-        binAgg.push_back(pFixed->bMarker);
+    ByteArray RTPPacket::SerializeFixedHeader() const {
+        ByteArray vFixedBytes;
+        vFixedBytes.reserve(FIXEDHEADER_SIZE);
 
-        util::BinArray binPayloadType = util::Binarize(pFixed->unPayloadType, 7);
-        std::copy(binPayloadType.begin(), binPayloadType.end(), binAgg.end());
+        BitArray vAggBits;
+        vAggBits.reserve(2 * BITS_PER_BYTE);
 
-        util::ByteArray byteParams = util::Bytify(binAgg);
-        std::copy(binAgg.begin(), binAgg.end(), byteFixed.begin());
+        BitArray vVersionBits = util::Binarize(m_unVersion, 2);
+        vAggBits.insert(vAggBits.end(), vVersionBits.begin(), vVersionBits.end());
 
-        util::ByteArray byteTimestamp = util::SerializeInteger(pFixed->unTimestamp, true);
-        std::copy(byteTimestamp.begin(), byteTimestamp.end(), byteFixed.begin());
+        vAggBits.push_back(m_bHasExtension);
+        vAggBits.push_back(m_bHasExtension);
 
-        util::ByteArray byteSSRC = util::SerializeInteger(pFixed->unCC, true);
-        std::copy(byteSSRC.begin(), byteSSRC.end(), byteFixed.begin());
+        BitArray vCCBits = util::Binarize(m_unCC, 4);
+        vAggBits.insert(vAggBits.end(), vCCBits.begin(), vCCBits.end());
 
-        unPacketSize += RTP_FIXEDHEADER_SIZE;
+        vAggBits.push_back(m_bMarker);
 
-        /* --- Contributors --- */
-        RTPHeaderContributors* pContrib = stPacket.pHeaderContributors;
+        BitArray vPayloadTypeBits = util::Binarize(m_unPayloadType, 7);
+        vAggBits.insert(vAggBits.end(), vPayloadTypeBits.begin(), vPayloadTypeBits.end());
 
-        bool bContrib = pContrib != nullptr && pContrib->unCC;
-        util::ByteArray byteContribs;
+        ByteArray vParamBytes = util::Bytify(vAggBits);
+        vFixedBytes.insert(vFixedBytes.end(), vParamBytes.begin(), vParamBytes.end());
 
-        if(bContrib) {
-            if(pContrib == nullptr)
-                throw std::invalid_argument("Contribution was enabled, but no contributors provided.");
+        ByteArray vSeqNumBytes = util::SerializeInteger(m_unSequenceNumber, true);
+        vFixedBytes.insert(vFixedBytes.end(), vSeqNumBytes.begin(), vSeqNumBytes.end());
 
-            byteContribs.reserve(4 * pContrib->unCC);
-            
-            for(unsigned int unIdx = 0; unIdx < pContrib->unCC; ++unIdx) {
-                util::ByteArray byteContrib = util::SerializeInteger(pContrib->pCSRC[unIdx], true);
-                std::copy(byteContrib.begin(), byteContrib.end(), byteContribs.end());
-            }
+        ByteArray vTimestampBytes = util::SerializeInteger(m_unTimestamp, true);
+        vFixedBytes.insert(vFixedBytes.end(), vTimestampBytes.begin(), vTimestampBytes.end());
+
+        ByteArray vSSRCBytes = util::SerializeInteger(m_unSSRC, true);
+        vFixedBytes.insert(vFixedBytes.end(), vSSRCBytes.begin(), vSSRCBytes.end());
+
+        return vFixedBytes;
+    };
+
+    ByteArray RTPPacket::SerializeContributions() const {
+        ByteArray vContribBytes;
+        vContribBytes.reserve(BYTES_PER_WORD * m_unCC);
+
+        for (Word unContributor : m_vContributors) {
+            ByteArray vCBytes = util::SerializeInteger(unContributor, true);
+            vContribBytes.insert(vContribBytes.end(), vCBytes.begin(), vCBytes.end());
         }
 
-        unPacketSize += byteContribs.size();
+        return vContribBytes;
+    }
 
-        /* --- Extension -- */
-        RTPHeaderExtension* pExtension = stPacket.pHeaderExtension;
+    ByteArray RTPPacket::SerializeExtension() const {
+        if (!m_bHasExtension) return {};
 
-        bool bExtension = pFixed->bHasExtension;
-        util::ByteArray byteExtension;
+        ByteArray vExtensionBytes;
+        vExtensionBytes.reserve(BYTES_PER_WORD + m_unExtWordCnt * BYTES_PER_WORD);
 
-        if(bExtension) {
-            if(pExtension == nullptr)
-                throw std::invalid_argument("Extension was enabled, but no extension provided.");
-            
-            byteExtension.reserve(4 + 4 * pExtension->unWordCount);
+        ByteArray vProfileBytes = util::SerializeInteger(m_unProfile, true);
+        vExtensionBytes.insert(vExtensionBytes.end(), vProfileBytes.begin(), vProfileBytes.end());
 
-            util::ByteArray byteProfile = util::SerializeInteger(pExtension->unProfile, true);
-            std::copy(byteProfile.begin(), byteProfile.end(), byteExtension.end());
+        ByteArray vWordCntBytes = util::SerializeInteger(m_unExtWordCnt, true);
+        vExtensionBytes.insert(vExtensionBytes.end(), vWordCntBytes.begin(), vWordCntBytes.end());
 
-            util::ByteArray byteExtLength = util::SerializeInteger(pExtension->unWordCount, true);
-            std::copy(byteExtLength.begin(), byteExtLength.end(), byteExtension.end());
-            
-            for(unsigned int unIdx = 0; unIdx < pExtension->unWordCount; ++unIdx) {
-                util::ByteArray byteExtWord = util::SerializeInteger(pExtension->pExtension[unIdx], true);
-                std::copy(byteExtWord.begin(), byteExtWord.end(), byteExtension.end());
-            }
+        for (Word unExtWord : m_vExtension) {
+            ByteArray vExtWordBytes = util::SerializeInteger(unExtWord, true);
+            vExtensionBytes.insert(vExtensionBytes.end(), vExtWordBytes.begin(), vExtWordBytes.end());
         }
 
-        unPacketSize += byteExtension.size();
+        return vExtensionBytes;
+    }
 
-        /* --- Payload --- */
-        unPacketSize += stPacket.vPayload.size();
-
-        /* -- Padding --- */
-        bool bPadding = stPacket.pHeaderFixed->bHasPadding;
-        util::ByteArray bytePadding;
-
-        if(bPadding) {
-            uint8_t unPaddingFactor = stPacket.pHeaderFixed->unPaddingFactor;
-            uint8_t unPadSize = std::max((uint8_t) (unPaddingFactor - (unPacketSize % unPaddingFactor)), unPaddingFactor);
-
-            bytePadding.resize(unPadSize, 0);
-            bytePadding[unPadSize-1] = unPadSize;
-        }
-
-        unPacketSize += bytePadding.size();
-
-        /* -- Aggregate Packet & Payload --- */
-        vSerializedPacket.resize(unPacketSize);
-
-        std::copy(byteFixed.begin(), byteFixed.end(), vSerializedPacket.end());
-
-        if(bContrib)
-            std::copy(byteContribs.begin(), byteContribs.end(), vSerializedPacket.end());
-
-        if(bExtension)
-            std::copy(byteExtension.begin(), byteExtension.end(), vSerializedPacket.end());
-
-        std::copy(stPacket.vPayload.begin(), stPacket.vPayload.end(), vSerializedPacket.end());
+    ByteArray RTPPacket::GeneratePadding(Word unPacketSize) const {
+        if (!m_bHasExtension) return {};
         
-        if(bPadding)
-            std::copy(bytePadding.begin(), bytePadding.end(), vSerializedPacket.end());
+        Byte unNumOfBytes = m_unPaddingFactor - (unPacketSize % m_unPaddingFactor);
+        if (unNumOfBytes == 0) unNumOfBytes = m_unPaddingFactor;
+
+        ByteArray vPaddingBytes;
+        vPaddingBytes.resize(unNumOfBytes, 0);
+        vPaddingBytes[unNumOfBytes - 1] = unNumOfBytes;
+
+        return vPaddingBytes;
     }
 
 };

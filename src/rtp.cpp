@@ -88,6 +88,8 @@ namespace rtp {
         ByteArray::const_iterator itrPayStart = vSerializedBytes.cbegin() + siStartByte;
         ByteArray::const_iterator itrPayEnd = vSerializedBytes.cend() - unNumPadBytes;
         pktDeserialized.m_vPayload = ByteArray(itrPayStart, itrPayEnd);
+
+        return pktDeserialized;
     }
 
     ByteArray RTPPacket::SerializeFixedHeader() const {
@@ -216,7 +218,7 @@ namespace rtp {
         size_t siRemainingBytes = vSerializedBytes.size() - FIXEDHEADER_SIZE;
         siRemainingBytes -= m_unCC * BYTES_PER_WORD;
 
-        if(siRemainingBytes < BYTES_PER_WORD)
+        if (siRemainingBytes < BYTES_PER_WORD)
             throw std::invalid_argument("Serialized packet does not have extension.");
 
         ByteArray::const_iterator itrByte = vSerializedBytes.begin() + FIXEDHEADER_SIZE + m_unCC * BYTES_PER_WORD;
@@ -231,7 +233,7 @@ namespace rtp {
 
         // Extension words
         siRemainingBytes -= BYTES_PER_WORD;
-        if(siRemainingBytes < m_unExtWordCnt * BYTES_PER_WORD)
+        if (siRemainingBytes < m_unExtWordCnt * BYTES_PER_WORD)
             throw std::invalid_argument("Serialized packet does not have extension.");
 
         for (size_t siIdx = 0; siIdx < m_unExtWordCnt; ++siIdx) {
@@ -239,4 +241,5 @@ namespace rtp {
             m_vExtension.emplace_back(unExtWord);
             itrByte += BYTES_PER_WORD;
         }
+    }
 };

@@ -61,6 +61,10 @@ namespace rtp {
         void SetExtension(const WordArray& vExtension);
         void SetProfile(Half unProfile) { m_unProfile = unProfile; };
 
+        /* --- Payload --- */
+        void LoadPayload(const ByteArray& vPayloadBytes) { m_vPayload = vPayloadBytes; };
+        ByteArray RetreivePayload() const { return m_vPayload; };
+
         /* --- Padding --- */
         bool HasPadding() const { return m_bHasPadding; }
         Byte PaddingFactor() const { return m_unPaddingFactor; }
@@ -149,7 +153,7 @@ namespace rtp {
 
 
         inline ByteArray BitsToBytes(const BitArray& vBits) {
-            size_t siPadBits = 8 - (vBits.size() % 8);
+            size_t siPadBits = (8 - (vBits.size() % 8)) % 8;
             size_t siTotalBytes = (vBits.size() + siPadBits) / 8;
 
             ByteArray vBytes;
@@ -161,7 +165,7 @@ namespace rtp {
                     size_t siBitNum = (siByteIdx * BITS_PER_BYTE) + siBitIdx;
 
                     if (siBitNum < siPadBits) continue;
-                    else siBitNum - siPadBits;
+                    else siBitNum -= siPadBits;
                     
                     if (vBits[siBitNum]) unByte += std::pow(2, 7 - siBitIdx);
                     

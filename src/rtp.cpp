@@ -59,6 +59,37 @@ namespace rtp {
         return vSerializedBytes;
     }
 
+    RTPPacket RTPPacket::Deserialize(ByteArray vSerializedBytes) {
+        if (vSerializedBytes.size() < FIXEDHEADER_SIZE)
+            throw std::invalid_argument("Serialized packet does not have a readable header.");
+
+        RTPPacket pktDeserialized;
+
+        pktDeserialized.DeserializeFixedHeader(vSerializedBytes);
+        pktDeserialized.DeserializeContributions(vSerializedBytes);
+        pktDeserialized.DeserializeExtension(vSerializedBytes);
+     
+        size_t siRemainingBytes = vSerializedBytes.size();
+        siRemainingBytes -= FIXEDHEADER_SIZE + pktDeserialized.m_unCC * BYTES_PER_WORD;
+        if (pktDeserialized.m_bHasExtension)
+            siRemainingBytes -= (1 + pktDeserialized.m_unExtWordCnt) * BYTES_PER_WORD;
+
+        size_t siStartByte = FIXEDHEADER_SIZE;
+        siStartByte += pktDeserialized.m_unCC * BYTES_PER_WORD;
+        siStartByte += pktDeserialized.m_bHasExtension ? (1 + pktDeserialized.m_unExtWordCnt) * BYTES_PER_WORD : 0;
+    
+        Byte unNumPadBytes = 0;
+        if (pktDeserialized.m_bHasPadding)
+            unNumPadBytes = vSerializedBytes[vSerializedBytes.size() - 1];
+
+        if (vSerializedBytes.size() - siStartByte - unNumPadBytes < 0)
+            throw std::invalid_argument("Serialized packet does not have a readable payload.");
+
+        ByteArray::const_iterator itrPayStart = vSerializedBytes.cbegin() + siStartByte;
+        ByteArray::const_iterator itrPayEnd = vSerializedBytes.cend() - unNumPadBytes;
+        pktDeserialized.m_vPayload = ByteArray(itrPayStart, itrPayEnd);
+    }
+
     ByteArray RTPPacket::SerializeFixedHeader() const {
         ByteArray vFixedBytes;
         vFixedBytes.reserve(FIXEDHEADER_SIZE);
@@ -140,4 +171,72 @@ namespace rtp {
         return vPaddingBytes;
     }
 
+    void RTPPacket::DeserializeFixedHeader(const ByteArray& vSerializedBytes) {
+        // General Parameters
+        m_unVersion = (vSerializedBytes[0] & 0b11000000) >> 6;
+        m_bHasPadding = vSerializedBytes[0] & 0xb00100000;
+        m_bHasExtension = vSerializedBytes[0] & 0xb00010000;
+        m_unCC = vSerializedBytes[0] & 0b00001111;
+        m_bMarker = vSerializedBytes[1] & 0b10000000;
+        m_unPaddingFactor = vSerializedBytes[1] & 0x01111111;
+
+        // Sequence number
+        ByteArray vSeqNumBytes(vSerializedBytes.begin() + 2, vSerializedBytes.begin() + 4);
+        m_unSequenceNumber = conv::BytesToInteger<Half>(vSeqNumBytes);
+
+        // Timestamp
+        ByteArray vTimestampBytes(vSerializedBytes.begin() + 4, vSerializedBytes.begin() + 8);
+        m_unTimestamp = conv::BytesToInteger<Word>(vTimestampBytes);
+
+        // SSRC identifier
+        ByteArray vSSRCBytes(vSerializedBytes.begin() + 8, vSerializedBytes.begin()+12);
+        m_unSSRC = conv::BytesToInteger<Word>(vSSRCBytes);
+
+        if (m_unVersion != 2)
+            throw std::invalid_argument("This library supports RTP version 2 only.");
+    }
+
+    void RTPPacket::DeserializeContributions(const ByteArray& vSerializedBytes) {
+        if (m_unCC == 0) return;
+
+        if (vSerializedBytes.size() < FIXEDHEADER_SIZE + m_unCC * BYTES_PER_WORD) 
+            throw std::invalid_argument("Serialized packet does not have contributors.");
+
+        ByteArray::const_iterator itrBytes = vSerializedBytes.begin() + FIXEDHEADER_SIZE;
+        for (size_t siIdx = 0; siIdx < m_unCC; ++siIdx) {
+            Word unContrib = conv::BytesToInteger<Word>({ itrBytes, itrBytes + BYTES_PER_WORD });
+            m_vContributors.emplace_back(unContrib);
+            itrBytes += BYTES_PER_WORD;
+        }
+    }
+
+    void RTPPacket::DeserializeExtension(const ByteArray& vSerializedBytes) {
+        if (!m_bHasExtension) return;
+
+        size_t siRemainingBytes = vSerializedBytes.size() - FIXEDHEADER_SIZE;
+        siRemainingBytes -= m_unCC * BYTES_PER_WORD;
+
+        if(siRemainingBytes < BYTES_PER_WORD)
+            throw std::invalid_argument("Serialized packet does not have extension.");
+
+        ByteArray::const_iterator itrByte = vSerializedBytes.begin() + FIXEDHEADER_SIZE + m_unCC * BYTES_PER_WORD;
+
+        // Profile
+        m_unProfile = conv::BytesToInteger<Half>({ itrByte, itrByte + BYTES_PER_HALF });
+        itrByte += BYTES_PER_HALF;
+
+        // Extension length
+        m_unExtWordCnt = conv::BytesToInteger<Half>({ itrByte, itrByte + BYTES_PER_HALF });
+        itrByte += BYTES_PER_HALF;
+
+        // Extension words
+        siRemainingBytes -= BYTES_PER_WORD;
+        if(siRemainingBytes < m_unExtWordCnt * BYTES_PER_WORD)
+            throw std::invalid_argument("Serialized packet does not have extension.");
+
+        for (size_t siIdx = 0; siIdx < m_unExtWordCnt; ++siIdx) {
+            Word unExtWord = conv::BytesToInteger<Word>({ itrByte, itrByte + BYTES_PER_WORD });
+            m_vExtension.emplace_back(unExtWord);
+            itrByte += BYTES_PER_WORD;
+        }
 };

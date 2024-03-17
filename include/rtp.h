@@ -2,16 +2,16 @@
 #define RTP_H
 
 #include <cstdint>
-#include <chrono>
 #include <vector>
-
-#include "util.hpp"
+#include <stdexcept>
+#include <cmath>
 
 namespace rtp {
 
     const unsigned int FIXEDHEADER_SIZE = 12;
     const unsigned int BITS_PER_BYTE = 8;
     const unsigned int BYTES_PER_WORD = 4;
+    const unsigned int BYTES_PER_HALF = 2;
 
     typedef bool Bit;
     typedef uint8_t Byte;
@@ -69,6 +69,7 @@ namespace rtp {
 
         /* --- Serialization --- */
         ByteArray Serialize() const;
+        static RTPPacket Deserialize(ByteArray vSerializedBytes);
 
     private:
         /* --- Serialization --- */
@@ -76,6 +77,10 @@ namespace rtp {
         ByteArray SerializeContributions() const;
         ByteArray SerializeExtension() const;
         ByteArray GeneratePadding(Word unPacketSize) const;
+
+        void DeserializeFixedHeader(const ByteArray& vSerializedBytes);
+        void DeserializeContributions(const ByteArray& vSerializedBytes);
+        void DeserializeExtension(const ByteArray& vSerializedBytes);
 
         /* --- Generic Parameters --- */
         Byte m_unVersion;
@@ -105,39 +110,6 @@ namespace rtp {
         ByteArray m_vPayload;
     };
 
-
-    struct RTPHeaderFixed {
-        uint8_t unVersion;
-        bool bHasPadding;
-        uint8_t unPaddingFactor;
-        bool bHasExtension;
-        uint8_t unCC;
-        bool bMarker;
-        uint8_t unPayloadType;
-        uint16_t unSequenceNumber;
-        uint32_t unTimestamp;
-        uint32_t unSSRC;
-    };
-
-    struct RTPHeaderContributors {
-        uint8_t unCC;
-        uint32_t* pCSRC;
-    };
-
-    struct RTPHeaderExtension {
-        uint16_t unProfile;
-        uint16_t unWordCount;
-        uint32_t* pExtension;
-    };
-
-
-    struct RTPPacketST {
-        RTPHeaderFixed* pHeaderFixed;
-        RTPHeaderContributors* pHeaderContributors;
-        RTPHeaderExtension* pHeaderExtension;
-        util::ByteArray vPayload;
-    };
-
     namespace conv {
 
         template<typename T>
@@ -163,7 +135,7 @@ namespace rtp {
             if (siFillTo) vBits.reserve(siFillTo);
 
             while (tInteger) {
-                vBits.push_back(tInteger & 1);
+                vBits.emplace_back(tInteger & 1);
                 tInteger = tInteger >> 1;
             }
 
@@ -194,10 +166,50 @@ namespace rtp {
                     if (vBits[siBitNum]) unByte += std::pow(2, 7 - siBitIdx);
                     
                 }
-                vBytes.push_back(unByte);
+                vBytes.emplace_back(unByte);
             }
 
             return vBytes;
+        }
+
+        template <typename T>
+        inline T BytesToInteger(ByteArray vBytes) {
+            T tInteger = 0;
+            size_t siNumBytes = vBytes.size();
+
+            for (size_t siIdx = 0; siIdx < siNumBytes; ++siIdx)
+                tInteger += ((T)vBytes[siIdx]) << (BITS_PER_BYTE * (siNumBytes - siIdx - 1));
+
+            return tInteger;
+        }
+
+        inline BitArray ByteToBits(Byte unByte) {
+            BitArray vBits;
+            vBits.reserve(BITS_PER_BYTE);
+
+            while (unByte) {
+                vBits.emplace_back(unByte & 1);
+                unByte = unByte >> 1;
+            }
+
+            if (vBits.size() < BITS_PER_BYTE)
+                vBits.resize(8, 0);
+
+            vBits = BitArray(vBits.rbegin(), vBits.rend());
+
+            return vBits;
+        }
+
+        inline BitArray BytesToBits(const ByteArray& vBytes) {
+            BitArray vBits;
+            vBits.reserve(BITS_PER_BYTE * vBytes.size());
+
+            for (const Byte& unByte : vBytes) {
+                BitArray vConvBits = ByteToBits(unByte);
+                vBits.insert(vBits.begin(), vConvBits.begin(), vConvBits.end());
+            }
+
+            return vBits;
         }
 
     };

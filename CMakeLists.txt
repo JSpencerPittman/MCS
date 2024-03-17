@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(MCS)
 
-set(CMAKE_CXX_STANDARD_REQUIRED 20)
+set (CMAKE_CXX_STANDARD 20)
 
 find_package(OpenCV REQUIRED)
 
@@ -21,7 +21,7 @@ if(UNIX OR APPLE)
 	file(GLOB_RECURSE PLATFORM_SRC_FILES src/udp_unix.cpp)
 endif(UNIX OR APPLE)
 
-file(GLOB GENERAL_SRC_FILES src/stream_protocol.cpp)
+file(GLOB GENERAL_SRC_FILES src/stream_protocol.cpp src/rtp.cpp)
 
 add_executable(Client src/client.cpp ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})
 add_executable(Server src/server.cpp ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})

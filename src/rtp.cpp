@@ -176,11 +176,11 @@ namespace rtp {
     void RTPPacket::DeserializeFixedHeader(const ByteArray& vSerializedBytes) {
         // General Parameters
         m_unVersion = (vSerializedBytes[0] & 0b11000000) >> 6;
-        m_bHasPadding = vSerializedBytes[0] & 0xb00100000;
-        m_bHasExtension = vSerializedBytes[0] & 0xb00010000;
+        m_bHasPadding = vSerializedBytes[0] & 0b00100000;
+        m_bHasExtension = vSerializedBytes[0] & 0b00010000;
         m_unCC = vSerializedBytes[0] & 0b00001111;
         m_bMarker = vSerializedBytes[1] & 0b10000000;
-        m_unPaddingFactor = vSerializedBytes[1] & 0x01111111;
+        m_unPayloadType = vSerializedBytes[1] & 0b01111111;
 
         // Sequence number
         ByteArray vSeqNumBytes(vSerializedBytes.begin() + 2, vSerializedBytes.begin() + 4);

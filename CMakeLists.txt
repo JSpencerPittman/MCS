@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED 20)
 
 find_package(OpenCV REQUIRED)
 
+add_subdirectory(externals/googletest)
+
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(include)
 
@@ -28,3 +30,8 @@ add_executable(Dev src/dev.cpp ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})
 target_link_libraries(Client ${OpenCV_LIBS})
 target_link_libraries(Server ${OpenCV_LIBS})
 target_link_libraries(Dev ${OpenCV_LIBS})
+
+enable_testing()
+file(GLOB TEST_SRC_FILES test/*)
+add_executable(Test ${TEST_SRC_FILES} ${GENERAL_SRC_FILES} ${PLATFORM_SRC_FILES})
+target_link_libraries(Test ${OpenCV_LIBS} GTest::gtest_main)
